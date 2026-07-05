@@ -1,25 +1,150 @@
 # Peru Shopping Comparison
 
-Codex skill package for comparing grocery lists across Makro, Plaza Vea, and Tottus in Peru.
+Claude Code skill for comparing grocery prices across Peru's major supermarkets: Makro, Plaza Vea, and Tottus.
 
-## Contents
+## What it does
 
-- `SKILL.md`: the skill instructions Codex loads
-- `make_styled_comparison.ps1`: the workbook generator used by the skill
-- `xlsx-guidelines.md`: portable spreadsheet rules used by the skill
+Prices an entire shopping list against all three stores and recommends **the single cheapest store for the full trip** — because splitting one shopping run across multiple stores costs more time than it saves in money.
 
-## Repository layout
+**Key features:**
+- ✅ Searches all 3 stores simultaneously using web_search + web_fetch
+- ✅ Handles 404 errors with smart fallback workflows (brand pages, category pages)
+- ✅ Supports both multipacks and individual units
+- ✅ Generates styled Excel comparison with direct product links
+- ✅ Works in Claude Chat, Claude Code, and any Claude environment with web access
 
-This repository is intentionally flat. Keep `SKILL.md` and `make_styled_comparison.ps1` at the repo root so the package is easy to publish, install, and sync.
+## Installation
 
-## Local install
+### Automated (Recommended)
 
-To use the skill locally, copy this repo into the Codex skill root:
+Run the install script from this repository:
 
-`C:\Users\ferna\.codex\skills\peru-shopping-comparsion`
+```powershell
+.\install.ps1
+```
+
+The script will:
+- Install to `~/.claude/skills/peru-shopping-comparison/`
+- Detect if updating existing installation
+- Confirm successful installation
+
+### Manual
+
+1. Create skill directory:
+   ```powershell
+   mkdir $env:USERPROFILE\.claude\skills\peru-shopping-comparison
+   ```
+
+2. Copy `SKILL.md` to the directory:
+   ```powershell
+   copy SKILL.md $env:USERPROFILE\.claude\skills\peru-shopping-comparison\
+   ```
+
+3. Restart Claude Code
+
+## Usage
+
+Invoke the skill with either trigger:
+
+```
+/peru-shopping
+/compare-prices
+```
+
+Then provide your shopping list:
+```
+Atún en lata - 6 latas
+Yogur griego - 1000 g
+Palta - 700 g
+Tomate - 880 g
+```
+
+The skill will:
+1. Search all 3 stores for each item
+2. Extract exact prices
+3. Calculate total cost per store
+4. Recommend cheapest option
+5. Generate Excel spreadsheet with all data
+
+## How it works
+
+### Store-specific workflows
+
+**Tottus** (most reliable):
+- Direct category page fetching
+- URLs from search work immediately
+- High success rate
+
+**Makro & Plaza Vea** (requires brand-page workflow):
+- Many `/p` URLs from search return 404
+- Working URLs have numeric product IDs (e.g., `-20502734`)
+- Falls back to brand/category pages to extract valid URLs
+- Singles multiplication when multipacks unavailable
+
+### Fallback logic
+
+When product not found:
+1. Try direct product URL from search
+2. If 404 → fetch brand/category page
+3. Extract URLs with numeric SKUs
+4. Fetch product pages with IDs
+5. If only singles exist → multiply by quantity needed
+6. If still not found → mark "No disponible"
+
+## Repository structure
+
+```
+peru-shopping-comparison/
+├── SKILL.md                    # Main skill definition (required)
+├── make_styled_comparison.ps1  # Excel generator (optional, enhances output)
+├── xlsx-guidelines.md          # Spreadsheet formatting rules
+├── install.ps1                 # Automated installer
+└── README.md                   # This file
+```
+
+**Layout notes:**
+- Flat structure for easy distribution
+- `SKILL.md` is the only required file
+- PowerShell scripts enhance functionality but skill works without them
+
+## Requirements
+
+- **Claude Code** or **Claude Chat** with web_search + web_fetch enabled
+- Internet connection (fetches live prices from store websites)
+- PowerShell (for Excel generation, optional)
+
+## Files
+
+| File | Purpose | Required |
+|------|---------|----------|
+| `SKILL.md` | Core skill instructions | ✅ Yes |
+| `make_styled_comparison.ps1` | Generates styled Excel workbook | ⚪ Optional |
+| `xlsx-guidelines.md` | Spreadsheet formatting reference | ⚪ Optional |
+| `install.ps1` | Automated installer | ⚪ Optional |
+
+## Troubleshooting
+
+**Skill not showing up:**
+- Restart Claude Code after installation
+- Check file is at `~/.claude/skills/peru-shopping-comparison/SKILL.md`
+- Verify SKILL.md has proper frontmatter (lines 1-7)
+
+**Prices not found:**
+- Some products may be out of stock or discontinued
+- Skill will mark "No disponible" and continue
+- Try alternative product names or brands
+
+**404 errors on Makro/Plaza Vea:**
+- Expected behavior - skill handles via brand-page fallback
+- Working URLs extracted automatically from category pages
 
 ## Notes
 
-- Keep `SKILL.md` and `make_styled_comparison.ps1` in sync.
-- The generator preserves the styled workbook template and timestamped filenames.
-- Only treat workbook outputs as reusable references when the success gate in the summary sheet says `successful`.
+- Prices are live from store websites (may change)
+- Stock status unreliable (treat as informational only)
+- Excel output only generated if PowerShell script available
+- Skill prioritizes Tottus for efficiency (highest success rate)
+
+## License
+
+MIT
