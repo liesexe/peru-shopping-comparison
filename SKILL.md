@@ -202,7 +202,7 @@ If some rows in a store end up as `No disponible`, still summarize that store wi
 
 ### 7. Build the output spreadsheet
 
-Read `/mnt/skills/public/xlsx/SKILL.md` before creating the file — follow its formatting guidance. Build one sheet with these columns:
+Read the repo-local spreadsheet guide in `xlsx-guidelines.md` before creating the file — follow its formatting guidance. Build one sheet with these columns:
 
 | Columna | Contenido |
 |---|---|

@@ -6,6 +6,7 @@ Codex skill package for comparing grocery lists across Makro, Plaza Vea, and Tot
 
 - `SKILL.md`: the skill instructions Codex loads
 - `make_styled_comparison.ps1`: the workbook generator used by the skill
+- `xlsx-guidelines.md`: portable spreadsheet rules used by the skill
 
 ## Repository layout
 
