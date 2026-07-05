@@ -1,6 +1,8 @@
 # Peru Shopping Comparison
 
-Claude Code skill for comparing grocery prices across Peru's major supermarkets: Makro, Plaza Vea, and Tottus.
+Skill for comparing grocery prices across Peru's major supermarkets: Makro, Plaza Vea, and Tottus.
+
+Works with **Claude Code** and **OpenAI Codex**.
 
 ## What it does
 
@@ -11,7 +13,7 @@ Prices an entire shopping list against all three stores and recommends **the sin
 - ✅ Handles 404 errors with smart fallback workflows (brand pages, category pages)
 - ✅ Supports both multipacks and individual units
 - ✅ Generates styled Excel comparison with direct product links
-- ✅ Works in Claude Chat, Claude Code, and any Claude environment with web access
+- ✅ Works in Claude Code, OpenAI Codex, Claude Chat, and any Claude environment with web access
 
 ## Installation
 
@@ -27,7 +29,9 @@ irm https://raw.githubusercontent.com/liesexe/peru-shopping-comparison/main/inst
 curl -fsSL https://raw.githubusercontent.com/liesexe/peru-shopping-comparison/main/install.sh | bash
 ```
 
-Installs to `~/.claude/skills/peru-shopping-comparison/`
+Detects and installs to:
+- Claude Code: `~/.claude/skills/`
+- OpenAI Codex: `~/.codex/skills/`
 
 ### Local Install
 
@@ -118,7 +122,7 @@ peru-shopping-comparison/
 
 ## Requirements
 
-- **Claude Code** or **Claude Chat** with web_search + web_fetch enabled
+- **Claude Code**, **OpenAI Codex**, or **Claude Chat** with web_search + web_fetch enabled
 - Internet connection (fetches live prices from store websites)
 - PowerShell (for Excel generation, optional)
 
