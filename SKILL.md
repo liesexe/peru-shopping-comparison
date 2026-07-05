@@ -1,5 +1,5 @@
 ---
-name: peru-shopping-comparsion
+name: peru-shopping-comparison
 description: Prices shopping lists at Makro Peru, Plaza Vea, and Tottus, then recommends the cheapest single-store full-trip option. Uses cut/bulk season, asks about ambiguous beef cuts and product variants, prefers exact product links, and keeps pack-size/unit-price logic. Outputs a spreadsheet with all three stores, direct product links, and no blank cells. Use web_search + web_fetch only.
 triggers:
   - /peru-shopping
@@ -20,23 +20,35 @@ The user shops at these three stores and explicitly wants **one full trip to the
 
 Important background: **Makro (`makro.plazavea.com.pe`) and Plaza Vea (`plazavea.com.pe`) share the same backend/catalog** — same SKUs, same product pages, often the same or very similar prices, since both are run by the same retail group. Makro sometimes shows exclusive/wholesale pricing on top of this shared catalog (per its own tagline, "precios exclusivos" for bulk buyers), so prices *can* differ between the two even on an identical SKU — always check both, don't assume they're identical. **Tottus (`tottus.com.pe`) is a fully separate platform** (Falabella group) with its own catalog and pricing.
 
-### Makro & Plaza Vea (same VTEX platform - less reliable)
+### Makro & Plaza Vea (same VTEX platform - requires brand-page workflow)
 
-**Many product pages return 404.** Prioritize Tottus category pages for efficiency. Use Makro/Plaza Vea only when Tottus missing an item or for spot-checking prices.
+**Many `/p` product URLs return 404 even when search finds them.** Working URLs have numeric product IDs (e.g., `-20502734`). Brand/category pages contain these working URLs.
 
 **Store base URLs**
 - Makro: `https://www.makro.plazavea.com.pe/`
 - Plaza Vea: `https://www.plazavea.com.pe/`
 - Tottus: `https://www.tottus.com.pe/tottus-pe/`
 
-**Direct-store navigation rule:** do not start with passive internet search unless the store itself fails to surface the item. Open the store base URL first, then use the store's own search, category, brand, or listing pages to find the item. Treat generic web search as a fallback only when the store's own navigation does not expose a usable product result.
+**Optimized workflow for Makro & Plaza Vea:**
 
-1. `web_search` with `site:makro.plazavea.com.pe <item in Spanish>` and separately `site:plazavea.com.pe <item in Spanish>` to discover candidate product URLs (pages ending in `/p`).
-2. **Never trust prices in search snippets.** Same product shows 5-8 wildly different "prices" across near-simultaneous search results (stale cache noise). Search snippets only for finding URLs, never for reading prices.
-3. `web_fetch` the specific product page (`/p` URL) for actual price. **Many pages 404** — if fetch fails, mark item as unavailable at that store rather than retrying extensively.
-   - When fetch succeeds: **checkout/"Comprar" link's `price=` URL parameter** (in centavos, e.g. `price=1740` = S/17.40) is authoritative price.
-   - Cross-check against **"similares" carousel entry** for same SKU/product name — if both agree, confidence high.
-4. **Stock status unreliable** — pages show "AGOTADO" and "X unidades disponibles" simultaneously (site-wide template quirk). Treat as informational only, not disqualifying.
+1. `web_search` with `site:makro.plazavea.com.pe <item in Spanish>` or `site:plazavea.com.pe <item in Spanish>` to discover candidate URLs.
+2. **Never trust prices in search snippets.** Search snippets only for finding URLs, never for reading prices.
+3. Try `web_fetch` on `/p` URL from search.
+   - **If succeeds:** extract price, done.
+   - **If 404:** proceed to step 4.
+4. **Fallback to brand/category page** (this is where working URLs live):
+   - `web_search` for brand/category page: `site:makro.plazavea.com.pe <brand category>`
+     - Examples: `/lacteos-y-huevos/gloria/7power`, `/abarrotes/conservas/pescados-en-conserva`
+   - `web_fetch` brand/category page
+   - Extract product URLs **with numeric IDs** (format: `product-name-NNNNNNNN/p`)
+   - These URLs work reliably, search URLs without IDs don't
+5. `web_fetch` the product URL with ID → extract price.
+6. **If only singles found but need multiple units:** multiply single price by quantity needed.
+   - Example: need 6 units, single = S/4.99 → total = 6 × S/4.99 = S/29.94
+   - Note in spreadsheet "Cantidad a comprar": "6 unidades individuales"
+   - Multipacks are helpful but not required — singles work fine
+7. **If still not found after fallback:** mark "No disponible"
+8. **Stock status unreliable** — pages show "AGOTADO" and "X unidades disponibles" simultaneously (site-wide template quirk). Treat as informational only, not disqualifying.
 
 
 **Makro/Plaza Vea direct-path rule:** for these stores, do not rely on generic web search alone when the first pass misses. Move straight to the store's own category or brand page and search inside it. This is especially important for:
@@ -62,19 +74,19 @@ If a broad item has a known store family or category, search that family first o
 
 **Pepino alias rule:** for Makro and Plaza Vea, search `pepinillo` whenever the user asks for `pepino`. Treat `pepinillo` as the store-side translation, not a separate fallback.
 
-**Performance optimization:** When pricing 10+ items, fetch Tottus category pages first (bulk data). Only fetch Makro/Plaza Vea for items missing at Tottus or when user specifically requests all three stores.
+**Performance optimization:** When pricing 10+ items, fetch Tottus category pages first (bulk data, high success rate). Makro/Plaza Vea require brand-page workflow (slower but works). Always price all three stores for comparison unless user specifies otherwise.
 
 ### Tottus (PREFERRED - most reliable)
 
 **Start here for efficiency.** Tottus `/lista/CATG.../` category pages return clean bulk product data (name, brand, size, price, discount) with high fetch success rate.
 
-**Direct-store navigation rule:** open the Tottus base URL first, then use its own search or category navigation. Do not begin with passive internet search when the store itself can search the item. Only fall back to generic web search if the store pages do not surface the product.
+**Direct category search workflow:** search for category URLs first, then fetch them for bulk product data.
 
 1. `web_search` with `site:tottus.com.pe lista <category>` to find category URLs (e.g., `lista/CATG16680/Verduras`, `lista/CATG16919/Carne-de-Pollo`).
 2. `web_fetch` the category/listing page — returns 20-30 products per page with full pricing. Extract all relevant items at once.
 3. For individual products needing stock confirmation: `web_fetch` the specific `/articulo/...` or `/p/` URL. **"Agregar al Carro"** = in stock; **"Producto sin stock :("** = out of stock. These pages sometimes 503 — retry once before giving up.
 4. If category not found, retry search with more general term or search for the exact product title.
-5. If the category/listing page shows the right item but not a final URL, keep pushing until you recover a concrete `/articulo/...` or `/p/` product page. Use the page title, SKU, internal site search, and browser inspection of the candidate page as needed. Category/listing URLs are discovery aids only and are never final links.
+5. Match products from category page prices to specific `/articulo/...` URLs from search results. Category pages show prices but may not show individual product URLs in the fetched HTML (client-side rendering). Use search to find the specific product URLs, then match by product name.
 
 For Makro/Plaza Vea, if step 1 or 2 fails, prefer the store's own category/brand navigation over another generic search query. This avoids missing SKUs that are present on the site but weakly indexed by external search.
 **Fallback ladder for blanks:** if a search does not produce a usable match, retry in this order before giving up:
@@ -173,7 +185,9 @@ For every item, search and fetch at Makro, Plaza Vea, and Tottus per the site-sp
 - `gloria pro` and other brand families with many variants
 - `galleta de arroz costeno` and similar packaged snacks where the product page title may omit accents or use a shorthand family name
 
-**Pack-size rule:** choose the pack that is both the closest practical match and the best value. Compare effective unit price before locking in the package size. If a slightly larger pack has a lower unit price and the extra quantity is reasonable, prefer that over a smaller pack with worse value. Example: if the request is for 12 units and a 15-unit pack has a lower unit price than the 12-unit pack, the 15-unit pack can win if the extra 3 units are a reasonable overbuy. Do not force the smallest pack just because it is smaller if it is clearly worse value.
+**Pack-size rule:** choose the pack that is both the closest practical match and the best value. Compare effective unit price before locking in the package size. If a slightly larger pack has a lower unit price and the extra quantity is reasonable, prefer that over a smaller pack with worse value. Example: if the request is for 12 units and a 15-unit pack has a lower unit price than the 12-unit pack, the 15-unit pack can win if the extra 3 units are a reasonable overbuy. 
+
+**Multipacks vs singles:** If multipacks (sixpack, paquete 6) exist, use them. If only singles exist, buy multiple singles — works perfectly fine. Never mark as "No disponible" just because no multipack exists when singles are available. Calculate total: quantity needed × single price.
 
 **Accent-insensitive product matching:** when a query fails, strip accents and special characters before retrying. Try both forms of the same name, for example `costeño` and `costeno`, or `plátano` and `platano`. Keep the ASCII query as the default search string.
 
@@ -202,7 +216,11 @@ If some rows in a store end up as `No disponible`, still summarize that store wi
 
 ### 7. Build the output spreadsheet
 
-Read the repo-local spreadsheet guide in `xlsx-guidelines.md` before creating the file — follow its formatting guidance. Build one sheet with these columns:
+Read the repo-local spreadsheet guide in `xlsx-guidelines.md` before creating the file — follow its formatting guidance.
+
+**Tool availability note:** This skill uses `web_search` + `web_fetch` only. Works in all Claude environments (Claude Code CLI/VS Code/Desktop, Claude Chat). No browser agent or computer use required.
+
+Build one sheet with these columns:
 
 | Columna | Contenido |
 |---|---|
