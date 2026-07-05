@@ -15,18 +15,27 @@ Prices an entire shopping list against all three stores and recommends **the sin
 
 ## Installation
 
-### Automated (Recommended)
+### One Command (Recommended)
+
+**Windows (PowerShell 5.1+):**
+```powershell
+irm https://raw.githubusercontent.com/liesexe/peru-shopping-comparison/main/install.ps1 | iex
+```
+
+**macOS / Linux / WSL / Git Bash:**
+```bash
+curl -fsSL https://raw.githubusercontent.com/liesexe/peru-shopping-comparison/main/install.sh | bash
+```
+
+Installs to `~/.claude/skills/peru-shopping-comparison/`
+
+### Local Install
 
 Run the install script from this repository:
 
 ```powershell
 .\install.ps1
 ```
-
-The script will:
-- Install to `~/.claude/skills/peru-shopping-comparison/`
-- Detect if updating existing installation
-- Confirm successful installation
 
 ### Manual
 
