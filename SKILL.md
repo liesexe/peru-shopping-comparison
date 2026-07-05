@@ -14,11 +14,45 @@ Prices an entire shopping list against three Peruvian retailers and recommends t
 
 The user shops at these three stores and explicitly wants **one full trip to the cheapest single store**, not a per-item cherry-picked list that would require visiting all three. Every output from this skill must be built around that goal: compare the total cost of the *entire list* at each store, then recommend one winner.
 
+## Execution workflow
+
+**CRITICAL: Run to completion without intermediate updates.**
+
+1. **Ask clarifying questions ONLY about products** (if needed):
+   - Ambiguous items (e.g., "pollo" → need cut specification)
+   - Product variants (e.g., brand preference, flavor)
+   - Pack size clarification
+   - **DO NOT ask**: permission to continue, execution confirmations, "should I proceed?", time warnings
+
+2. **Once clarifications done, execute fully**:
+   - Search all 3 stores for all products
+   - No status updates during execution
+   - No "working on it..." messages
+   - No progress reports
+   - Run to completion even if takes 5+ minutes
+
+3. **Present final result only**:
+   - Complete comparison table with all prices
+   - Total per store
+   - Recommended cheapest store
+   - Direct product links
+
+**Do not stop mid-execution. Do not ask if you should continue. Finish the entire report.**
+
 ## The three sites and how to actually reach them
 
 **Do not use bash/curl/requests against any of these domains.** None are in the sandbox's allowed network list, and even if they were, all three gate most category browsing behind a delivery-address session that a stateless script can't set. Use `web_search` + `web_fetch` only.
 
 Important background: **Makro (`makro.plazavea.com.pe`) and Plaza Vea (`plazavea.com.pe`) share the same backend/catalog** — same SKUs, same product pages, often the same or very similar prices, since both are run by the same retail group. Makro sometimes shows exclusive/wholesale pricing on top of this shared catalog (per its own tagline, "precios exclusivos" for bulk buyers), so prices *can* differ between the two even on an identical SKU — always check both, don't assume they're identical. **Tottus (`tottus.com.pe`) is a fully separate platform** (Falabella group) with its own catalog and pricing.
+
+**CRITICAL DOMAIN RULE:** Makro and Plaza Vea are physically different stores with different locations. **NEVER mix domains:**
+- **Makro column** → ONLY `makro.plazavea.com.pe` URLs
+- **Plaza Vea column** → ONLY `plazavea.com.pe` URLs (NOT `makro.plazavea.com.pe`)
+- Search each store on its own domain
+- Extract URLs matching the target domain only
+- If searching Makro brand page, use only Makro URLs for Makro column
+- If searching Plaza Vea, use only Plaza Vea URLs for Plaza Vea column
+- Same product? Search both domains separately and use matching domain URL per column
 
 ### Makro & Plaza Vea (same VTEX platform - requires brand-page workflow)
 
@@ -33,25 +67,45 @@ Important background: **Makro (`makro.plazavea.com.pe`) and Plaza Vea (`plazavea
 
 **Optimized workflow for Makro & Plaza Vea ONLY:**
 
-1. `web_search` with `site:makro.plazavea.com.pe <item in Spanish>` or `site:plazavea.com.pe <item in Spanish>` to discover candidate URLs.
+**When pricing Makro:**
+1. `web_search` with `site:makro.plazavea.com.pe <item in Spanish>` to discover candidate URLs
 2. **Never trust prices in search snippets.** Search snippets only for finding URLs, never for reading prices.
-3. Try `web_fetch` on `/p` URL from search.
-   - **If succeeds:** extract price, done.
-   - **If 404:** proceed to step 4.
-4. **Fallback to brand/category page** (this is where working URLs live):
+3. Try `web_fetch` on `/p` URL from search (must be `makro.plazavea.com.pe` domain)
+   - **If succeeds:** extract price, use this URL for Makro column
+   - **If 404:** proceed to step 4
+4. **Fallback to Makro brand/category page**:
    - `web_search` for brand/category page: `site:makro.plazavea.com.pe <brand category>`
-     - Examples: `/lacteos-y-huevos/gloria/7power`, `/abarrotes/conservas/pescados-en-conserva`
    - `web_fetch` brand/category page
-   - Extract product URLs **with numeric IDs at the end** (format: `product-name-NNNNNNNN/p` where N is 8-digit SKU)
-   - Example working URL: `bebida-lactea-gloria-pro-power-caramel-macchiato-botella-320ml-20502734/p`
-   - These SKU URLs work reliably, search URLs without numeric IDs don't
-5. `web_fetch` the product URL with numeric SKU → extract price.
+   - Extract product URLs **with numeric IDs at the end** from `makro.plazavea.com.pe` domain only
+   - Format: `product-name-NNNNNNNN/p` where N is 8-digit SKU
+5. `web_fetch` the Makro product URL with numeric SKU → extract price, use for Makro column
+
+**When pricing Plaza Vea:**
+1. `web_search` with `site:plazavea.com.pe <item in Spanish>` (NOT `site:makro.plazavea.com.pe`)
+2. Try `web_fetch` on `/p` URL from search (must be `plazavea.com.pe` domain)
+   - **If succeeds:** extract price, use this URL for Plaza Vea column
+   - **If 404:** proceed to fallback
+3. **Fallback to Plaza Vea brand/category page**:
+   - `web_search` for brand/category page: `site:plazavea.com.pe <brand category>`
+   - `web_fetch` brand/category page
+   - Extract product URLs **with numeric IDs** from `plazavea.com.pe` domain only
+4. `web_fetch` the Plaza Vea product URL → extract price, use for Plaza Vea column
+
+**Domain enforcement:** Each store column gets URLs from its own domain only. Never use a `makro.plazavea.com.pe` URL in Plaza Vea column or vice versa.
+**Common steps (both stores):**
+
 6. **If only singles found but need multiple units:** multiply single price by quantity needed.
    - Example: need 6 units, single = S/4.99 → total = 6 × S/4.99 = S/29.94
    - Note in spreadsheet "Cantidad a comprar": "6 unidades individuales"
    - Multipacks are helpful but not required — singles work fine
-7. **If still not found after fallback:** mark "No disponible"
+7. **If still not found after fallback:** mark "No disponible" for that specific store
 8. **Stock status unreliable** — pages show "AGOTADO" and "X unidades disponibles" simultaneously (site-wide template quirk). Treat as informational only, not disqualifying.
+
+**Domain verification before adding to spreadsheet:**
+- Makro row URL starts with `https://www.makro.plazavea.com.pe/` → ✅
+- Plaza Vea row URL starts with `https://www.plazavea.com.pe/` → ✅
+- Makro row with `plazavea.com.pe` (not makro subdomain) → ❌ ERROR - search Plaza Vea domain instead
+- Plaza Vea row with `makro.plazavea.com.pe` → ❌ ERROR - search plazavea.com.pe domain instead
 
 
 **Makro/Plaza Vea direct-path rule:** for these stores, do not rely on generic web search alone when the first pass misses. Move straight to the store's own category or brand page and search inside it. This is especially important for:
@@ -276,6 +330,20 @@ Also store the measured rates nearby so future runs can inspect them:
 - `B11 = percentage`
 
 Only workbooks with `B9 = successful` should be used as reference outputs for future runs.
+
+### 8. Present final results — no process explanation
+
+**When presenting final output:**
+
+- Show the comparison table with all prices
+- State the recommended store and total costs
+- Present the Excel file
+- **DO NOT explain the search process**
+- **DO NOT describe what you did** ("I searched X", "I found Y")
+- **DO NOT narrate challenges** ("some products were hard to find")
+- **DO NOT provide status updates** ("working on Makro now...")
+
+**Just show results.** User wants final report, not implementation details.
 
 ### 8. Summarize in chat
 

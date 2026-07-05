@@ -12,25 +12,25 @@ $files = @(
 
 # Check if SKILL.md exists
 if (-not (Test-Path "SKILL.md")) {
-    Write-Host "✗ SKILL.md not found" -ForegroundColor Red
+    Write-Host "ERROR: SKILL.md not found" -ForegroundColor Red
     exit 1
 }
 
 # Remove old package if exists
 if (Test-Path $outputFile) {
     Remove-Item $outputFile -Force
-    Write-Host "→ Removed old package" -ForegroundColor Yellow
+    Write-Host "Removed old package" -ForegroundColor Yellow
 }
 
 # Create package
-Write-Host "→ Packaging skill..." -ForegroundColor Cyan
+Write-Host "Packaging skill..." -ForegroundColor Cyan
 $existingFiles = $files | Where-Object { Test-Path $_ }
 Compress-Archive -Path $existingFiles -DestinationPath $outputFile
 
-Write-Host "✓ Created $outputFile" -ForegroundColor Green
+Write-Host "Created $outputFile" -ForegroundColor Green
 Write-Host ""
 Write-Host "Upload to:" -ForegroundColor Cyan
-Write-Host "  Claude Desktop → Settings → Customize → Skills" -ForegroundColor Gray
+Write-Host "  Claude Desktop > Settings > Customize > Skills" -ForegroundColor Gray
 Write-Host ""
 Write-Host "Package includes:" -ForegroundColor Cyan
 $existingFiles | ForEach-Object { Write-Host "  - $_" -ForegroundColor Gray }
