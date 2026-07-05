@@ -22,14 +22,16 @@ Important background: **Makro (`makro.plazavea.com.pe`) and Plaza Vea (`plazavea
 
 ### Makro & Plaza Vea (same VTEX platform - requires brand-page workflow)
 
-**Many `/p` product URLs return 404 even when search finds them.** Working URLs have numeric product IDs (e.g., `-20502734`). Brand/category pages contain these working URLs.
+**IMPORTANT: Numeric SKU pattern applies ONLY to Makro & Plaza Vea URLs, NOT Tottus.**
+
+**Many `/p` product URLs return 404 even when search finds them.** Working Makro/Plaza Vea URLs have numeric product IDs at the end (e.g., `product-name-20502734/p`). Brand/category pages contain these working URLs.
 
 **Store base URLs**
 - Makro: `https://www.makro.plazavea.com.pe/`
 - Plaza Vea: `https://www.plazavea.com.pe/`
 - Tottus: `https://www.tottus.com.pe/tottus-pe/`
 
-**Optimized workflow for Makro & Plaza Vea:**
+**Optimized workflow for Makro & Plaza Vea ONLY:**
 
 1. `web_search` with `site:makro.plazavea.com.pe <item in Spanish>` or `site:plazavea.com.pe <item in Spanish>` to discover candidate URLs.
 2. **Never trust prices in search snippets.** Search snippets only for finding URLs, never for reading prices.
@@ -40,9 +42,10 @@ Important background: **Makro (`makro.plazavea.com.pe`) and Plaza Vea (`plazavea
    - `web_search` for brand/category page: `site:makro.plazavea.com.pe <brand category>`
      - Examples: `/lacteos-y-huevos/gloria/7power`, `/abarrotes/conservas/pescados-en-conserva`
    - `web_fetch` brand/category page
-   - Extract product URLs **with numeric IDs** (format: `product-name-NNNNNNNN/p`)
-   - These URLs work reliably, search URLs without IDs don't
-5. `web_fetch` the product URL with ID → extract price.
+   - Extract product URLs **with numeric IDs at the end** (format: `product-name-NNNNNNNN/p` where N is 8-digit SKU)
+   - Example working URL: `bebida-lactea-gloria-pro-power-caramel-macchiato-botella-320ml-20502734/p`
+   - These SKU URLs work reliably, search URLs without numeric IDs don't
+5. `web_fetch` the product URL with numeric SKU → extract price.
 6. **If only singles found but need multiple units:** multiply single price by quantity needed.
    - Example: need 6 units, single = S/4.99 → total = 6 × S/4.99 = S/29.94
    - Note in spreadsheet "Cantidad a comprar": "6 unidades individuales"
@@ -80,11 +83,16 @@ If a broad item has a known store family or category, search that family first o
 
 **Start here for efficiency.** Tottus `/lista/CATG.../` category pages return clean bulk product data (name, brand, size, price, discount) with high fetch success rate.
 
+**IMPORTANT: Tottus URLs work differently than Makro/Plaza Vea:**
+- Tottus `/articulo/...` and `/p/` URLs from search work directly — NO numeric SKU extraction needed
+- Example valid Tottus URL: `tottus-pe/articulo/113927515/Yogurt-Griego-Natural-1-kg/113927517`
+- DO NOT apply Makro/Plaza Vea's numeric SKU pattern to Tottus URLs
+
 **Direct category search workflow:** search for category URLs first, then fetch them for bulk product data.
 
 1. `web_search` with `site:tottus.com.pe lista <category>` to find category URLs (e.g., `lista/CATG16680/Verduras`, `lista/CATG16919/Carne-de-Pollo`).
 2. `web_fetch` the category/listing page — returns 20-30 products per page with full pricing. Extract all relevant items at once.
-3. For individual products needing stock confirmation: `web_fetch` the specific `/articulo/...` or `/p/` URL. **"Agregar al Carro"** = in stock; **"Producto sin stock :("** = out of stock. These pages sometimes 503 — retry once before giving up.
+3. For individual products needing stock confirmation: `web_fetch` the specific `/articulo/...` or `/p/` URL directly from search results. **"Agregar al Carro"** = in stock; **"Producto sin stock :("** = out of stock. These pages sometimes 503 — retry once before giving up.
 4. If category not found, retry search with more general term or search for the exact product title.
 5. Match products from category page prices to specific `/articulo/...` URLs from search results. Category pages show prices but may not show individual product URLs in the fetched HTML (client-side rendering). Use search to find the specific product URLs, then match by product name.
 
