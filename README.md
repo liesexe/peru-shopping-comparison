@@ -17,7 +17,21 @@ Prices an entire shopping list against all three stores and recommends **the sin
 
 ## Installation
 
-### One Command (Recommended)
+### Claude Desktop Upload
+
+Upload directly to Claude Desktop via Settings:
+
+1. **Package the skill:**
+   ```powershell
+   .\package.ps1
+   ```
+   Creates `peru-shopping-comparison.zip`
+
+2. **Upload:**
+   - Claude Desktop → Settings → Customize → Skills
+   - Upload `peru-shopping-comparison.zip`
+
+### One Command (CLI Installation)
 
 **Windows (PowerShell 5.1+):**
 ```powershell
@@ -111,14 +125,17 @@ peru-shopping-comparison/
 ├── SKILL.md                    # Main skill definition (required)
 ├── make_styled_comparison.ps1  # Excel generator (optional, enhances output)
 ├── xlsx-guidelines.md          # Spreadsheet formatting rules
-├── install.ps1                 # Automated installer
+├── install.ps1                 # Automated CLI installer
+├── install.sh                  # Automated CLI installer (Unix)
+├── package.ps1                 # Creates .zip for Claude Desktop upload
 └── README.md                   # This file
 ```
 
 **Layout notes:**
 - Flat structure for easy distribution
-- `SKILL.md` is the only required file
-- PowerShell scripts enhance functionality but skill works without them
+- Runtime files packaged together: `SKILL.md`, `make_styled_comparison.ps1`, `xlsx-guidelines.md`
+- Install scripts (`install.ps1`, `install.sh`) only needed for CLI installation
+- Package script (`package.ps1`) only needed for creating upload .zip
 
 ## Requirements
 
@@ -131,9 +148,11 @@ peru-shopping-comparison/
 | File | Purpose | Required |
 |------|---------|----------|
 | `SKILL.md` | Core skill instructions | ✅ Yes |
-| `make_styled_comparison.ps1` | Generates styled Excel workbook | ⚪ Optional |
-| `xlsx-guidelines.md` | Spreadsheet formatting reference | ⚪ Optional |
-| `install.ps1` | Automated installer | ⚪ Optional |
+| `make_styled_comparison.ps1` | Generates styled Excel workbook | ✅ Yes (runtime) |
+| `xlsx-guidelines.md` | Spreadsheet formatting reference | ✅ Yes (runtime) |
+| `install.ps1` | Automated CLI installer (Windows) | ⚪ No (install only) |
+| `install.sh` | Automated CLI installer (Unix) | ⚪ No (install only) |
+| `package.ps1` | Creates .zip for Claude Desktop upload | ⚪ No (packaging only) |
 
 ## Troubleshooting
 
